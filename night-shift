@@ -1,0 +1,15 @@
+#!/usr/bin/env python3
+"""Thin launcher — allows running directly without installing as a package."""
+
+import os
+import sys
+import warnings
+
+warnings.filterwarnings('ignore', category=DeprecationWarning)
+
+# Ensure the project root is on sys.path so `night_shift` package is found
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from night_shift.__main__ import main
+
+main()

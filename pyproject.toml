@@ -1,0 +1,12 @@
+[build-system]
+requires      = ["setuptools>=61"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name        = "night-shift"
+version     = "1.0.0"
+description = "XFCE color temperature tray app"
+requires-python = ">=3.10"
+
+[project.scripts]
+night-shift = "night_shift.__main__:main"
