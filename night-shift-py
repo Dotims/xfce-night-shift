@@ -1,0 +1,133 @@
+#!/usr/bin/env python3
+"""
+Night Shift – Python GTK popup application.
+
+Spawned by the C XFCE panel plugin (libnightshift.so) when the panel button
+is clicked. Receives panel button coordinates via command-line arguments to
+position itself flush with the panel.
+"""
+
+import sys
+import argparse
+import warnings
+
+warnings.filterwarnings('ignore', category=DeprecationWarning)
+
+sys.path.insert(0, '/usr/lib/night-shift')
+
+import gi
+gi.require_version('Gtk', '3.0')
+gi.require_version('Gdk', '3.0')
+from gi.repository import Gtk, Gdk
+
+from night_shift import config
+from night_shift.backend import Backend
+from night_shift.popup import PopupWindow
+from night_shift.style import CSS
+
+
+def apply_css():
+    provider = Gtk.CssProvider()
+    provider.load_from_data(CSS)
+    Gtk.StyleContext.add_provider_for_screen(
+        Gdk.Screen.get_default(),
+        provider,
+        Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
+    )
+
+
+class NightShiftApp:
+    def __init__(self, x: int, y: int, w: int, h: int) -> None:
+        self.btn_x = x
+        self.btn_y = y
+        self.btn_w = w
+        self.btn_h = h
+
+        self._backend = Backend()
+        cfg = config.load()
+        self._temp    = cfg['temp']
+        self._enabled = cfg['on']
+
+        apply_css()
+
+        self._popup = PopupWindow(
+            temp            = self._temp,
+            enabled         = self._enabled,
+            on_temp_changed = self._on_temp_changed,
+            on_toggle       = self._on_toggle,
+            on_preset       = self._on_preset,
+        )
+
+        # Quit the application entirely when the popup hides
+        self._popup.connect('hide', lambda *_: Gtk.main_quit())
+        
+        self._popup.show_all()
+        self._place_popup()
+        self._popup.present()
+
+    def _place_popup(self):
+        """Snap popup flush with the panel edge, centred on the button."""
+        mon = Gdk.Display.get_default().get_primary_monitor()
+        geo = mon.get_geometry()
+        work = mon.get_workarea()
+
+        # The popup width/height
+        pw = self._popup.get_preferred_width()[1]
+        ph = self._popup.get_preferred_height()[1]
+
+        # Center horizontally on the button
+        cx = self.btn_x + self.btn_w // 2
+        px = max(work.x, min(cx - pw // 2, work.x + work.width - pw))
+
+        # Vertical: determine if the panel is at the top or bottom based on workarea vs geometry
+        bot_panel = geo.height - work.height - work.y
+        top_panel = work.y
+
+        # If button is closer to bottom of screen, put popup above it
+        if self.btn_y > geo.height / 2:
+            py = self.btn_y - ph
+        else:
+            py = self.btn_y + self.btn_h
+
+        self._popup.move(px, py)
+
+    def _on_temp_changed(self, temp: int):
+        self._temp = temp
+        if self._enabled:
+            self._backend.apply(temp)
+        self._save()
+
+    def _on_toggle(self, enabled: bool):
+        self._enabled = enabled
+        self._backend.apply(self._temp) if enabled else self._backend.reset()
+        self._save()
+
+    def _on_preset(self, temp: int):
+        self._temp    = temp
+        self._enabled = True
+        self._popup.set_state(temp, True)
+        self._backend.apply(temp)
+        self._save()
+
+    def _save(self):
+        config.save({'temp': self._temp, 'on': self._enabled})
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Night Shift Popup")
+    parser.add_argument('--x', type=int, default=0)
+    parser.add_argument('--y', type=int, default=0)
+    parser.add_argument('--w', type=int, default=0)
+    parser.add_argument('--h', type=int, default=0)
+    
+    # Ignore unknown args in case the panel or wrapper passes extra stuff
+    args, _ = parser.parse_known_args()
+
+    # The background script may already be applying the backend 
+    # but the popup ensures the UI matches the current state in JSON.
+    NightShiftApp(args.x, args.y, args.w, args.h)
+    Gtk.main()
+
+
+if __name__ == '__main__':
+    main()
