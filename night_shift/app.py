@@ -23,12 +23,18 @@ class NightShift:
       - Persists config on every state change.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, *, headless: bool = False) -> None:
         self._backend = Backend()
         cfg = config.load()
         self._temp    = cfg['temp']
         self._enabled = cfg['on']
         self._popup: PopupWindow | None = None
+
+        if self._enabled:
+            self._backend.apply(self._temp)
+
+        if headless:
+            return
 
         self._apply_css()
 
@@ -38,9 +44,6 @@ class NightShift:
             on_quit   = self._quit,
         )
         self._tray.refresh(enabled=self._enabled, temp=self._temp)
-
-        if self._enabled:
-            self._backend.apply(self._temp)
 
     # ── CSS ───────────────────────────────────────────────────────────────────
 
