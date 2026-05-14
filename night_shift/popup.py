@@ -1,9 +1,11 @@
 """Popup window: slider, spin-button and preset buttons."""
 
+import math
 import gi
 gi.require_version('Gtk', '3.0')
 gi.require_version('Gdk', '3.0')
 from gi.repository import Gtk, Gdk
+import cairo
 
 from .config import TEMP_MIN, TEMP_MAX, PRESETS
 
@@ -39,6 +41,7 @@ class PopupWindow(Gtk.Window):
         self._scale:      Gtk.Scale        | None = None
         self._spin:       Gtk.SpinButton   | None = None
         self._btn_toggle: Gtk.ToggleButton | None = None
+        self._box:        Gtk.Box          | None = None  # used in _on_draw for theme colour
 
         self._configure_window()
         self._build()
@@ -68,21 +71,77 @@ class PopupWindow(Gtk.Window):
         self.get_style_context().add_class('ns-popup')
         self.set_title("Night Shift")
         self.set_decorated(False)
+        self.set_app_paintable(True)
+        screen = self.get_screen()
+        if screen and screen.is_composited():
+            visual = screen.get_rgba_visual()
+            if visual:
+                self.set_visual(visual)
         self.set_keep_above(True)
         self.set_skip_taskbar_hint(True)
         self.set_skip_pager_hint(True)
         self.set_resizable(False)
+        self.connect('draw', self._on_draw)
         self.connect(
             'key-press-event',
             lambda w, e: w.hide() if e.keyval == Gdk.KEY_Escape else None,
         )
         self.connect('focus-out-event', lambda w, e: w.hide())
 
+    def _on_draw(self, widget, cr: cairo.Context) -> bool:
+        """Paint the rounded-rectangle background directly on the window surface.
+
+        This must be done here (in the window's own draw handler) rather than
+        via CSS border-radius on a child widget.  Child widgets draw *over* the
+        compositor window surface without clipping its rectangular boundary, so
+        any border-radius on a child leaves the corner pixels opaque/black.
+        Drawing the rounded rect here operates on the surface itself, so the
+        compositor correctly sees those corner pixels as fully transparent.
+        """
+        alloc = widget.get_allocation()
+        w, h  = alloc.width, alloc.height
+        r     = 6.0   # border-radius (keep in sync with CSS if changed)
+
+        # Retrieve the theme background colour from the *inner box*, not the
+        # window itself — the window's CSS is `background-color: transparent`
+        # so querying it would return alpha=0 and produce a see-through popup.
+        if self._box is not None:
+            style = self._box.get_style_context()
+        else:
+            style = widget.get_style_context()
+        bg = style.get_background_color(Gtk.StateFlags.NORMAL)
+
+        # Step 1: clear the entire window surface to fully transparent so that
+        # the compositor sees nothing in the corner regions outside the radius.
+        cr.set_operator(cairo.OPERATOR_SOURCE)
+        cr.set_source_rgba(0, 0, 0, 0)
+        cr.paint()
+
+        # Step 2: draw the rounded rectangle filled with the theme background.
+        # OPERATOR_OVER writes with proper alpha so the compositor blends it.
+        cr.set_operator(cairo.OPERATOR_OVER)
+        cr.new_sub_path()
+        cr.arc(r,     r,     r,  math.pi,       1.5 * math.pi)  # top-left
+        cr.arc(w - r, r,     r, -0.5 * math.pi, 0)              # top-right
+        cr.arc(w - r, h - r, r,  0,             0.5 * math.pi)  # bottom-right
+        cr.arc(r,     h - r, r,  0.5 * math.pi, math.pi)        # bottom-left
+        cr.close_path()
+        cr.set_source_rgba(bg.red, bg.green, bg.blue, bg.alpha)
+        cr.fill_preserve()
+
+        # Step 3: draw a subtle border on top.
+        cr.set_source_rgba(0.5, 0.5, 0.5, 0.30)
+        cr.set_line_width(1.0)
+        cr.stroke()
+
+        return False
+
     # ── Build ─────────────────────────────────────────────────────────────────
 
     def _build(self) -> None:
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         box.get_style_context().add_class('ns-box')
+        self._box = box
         self.add(box)
 
         box.pack_start(self._make_header(),    False, False, 0)
