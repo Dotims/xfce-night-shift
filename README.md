@@ -5,6 +5,8 @@ Reduces blue light by adjusting the screen temperature via `redshift` (X11) or `
 
 Instead of using a system tray icon, this plugin runs natively in the XFCE Panel (via a minimal C wrapper) and spawns a beautiful Python/GTK popup window with controls.
 
+![Night Shift Popup](assets/app.png)
+
 ---
 
 ## Features

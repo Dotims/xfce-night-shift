@@ -41,7 +41,8 @@ class PopupWindow(Gtk.Window):
         self._scale:      Gtk.Scale        | None = None
         self._spin:       Gtk.SpinButton   | None = None
         self._btn_toggle: Gtk.ToggleButton | None = None
-        self._box:        Gtk.Box          | None = None  # used in _on_draw for theme colour
+        self._color_box:  Gtk.Box          = Gtk.Box()
+        self._color_box.get_style_context().add_class('ns-theme-color')
 
         self._configure_window()
         self._build()
@@ -102,13 +103,10 @@ class PopupWindow(Gtk.Window):
         w, h  = alloc.width, alloc.height
         r     = 6.0   # border-radius (keep in sync with CSS if changed)
 
-        # Retrieve the theme background colour from the *inner box*, not the
-        # window itself — the window's CSS is `background-color: transparent`
-        # so querying it would return alpha=0 and produce a see-through popup.
-        if self._box is not None:
-            style = self._box.get_style_context()
-        else:
-            style = widget.get_style_context()
+        # Retrieve the theme background colour from the *dummy box*, not the
+        # window or main box itself. Those must remain transparent in CSS
+        # so they don't overdraw the Cairo rounded corners with rectangles.
+        style = self._color_box.get_style_context()
         bg = style.get_background_color(Gtk.StateFlags.NORMAL)
 
         # Step 1: clear the entire window surface to fully transparent so that
@@ -141,7 +139,6 @@ class PopupWindow(Gtk.Window):
     def _build(self) -> None:
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         box.get_style_context().add_class('ns-box')
-        self._box = box
         self.add(box)
 
         box.pack_start(self._make_header(),    False, False, 0)
