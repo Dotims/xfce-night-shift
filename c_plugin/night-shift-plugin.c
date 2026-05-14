@@ -104,7 +104,7 @@ night_shift_construct (XfcePanelPlugin *plugin)
     gtk_widget_set_tooltip_text (ns->button, "Night Shift (Color Temperature)");
     
     /* Create the icon */
-    ns->image = gtk_image_new_from_icon_name ("weather-clear-night", GTK_ICON_SIZE_BUTTON);
+    ns->image = gtk_image_new_from_icon_name ("night-light-symbolic", GTK_ICON_SIZE_BUTTON);
     gtk_container_add (GTK_CONTAINER (ns->button), ns->image);
     
     /* Add button to panel */
