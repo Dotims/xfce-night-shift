@@ -1,15 +1,15 @@
 # XFCE Night Shift
 
-A color temperature tray app for XFCE on Arch Linux.  
+A native color temperature panel plugin for XFCE on Arch Linux.  
 Reduces blue light by adjusting the screen temperature via `redshift` (X11) or `gammastep` (Wayland).
 
-The icon lives in the notification area of the panel. Click it to open a slider popup.
+Instead of using a system tray icon, this plugin runs natively in the XFCE Panel (via a minimal C wrapper) and spawns a beautiful Python/GTK popup window with controls.
 
 ---
 
 ## Features
 
-- Panel tray icon (moon/sun) with tooltip showing current state
+- Native XFCE Panel plugin (addable via *Panel Preferences → Items*)
 - Popup with a slider (1000 K – 6500 K)
 - Editable temperature field (type a value directly)
 - Quick presets: Day / Office / Sunset / Night / Deep
@@ -25,6 +25,8 @@ The icon lives in the notification area of the panel. Click it to open a slider 
 |---------|---------|
 | `python` | pre-installed |
 | `python-gobject` | `sudo pacman -S python-gobject` |
+| `xfce4-panel` (headers) | pre-installed or `xfce4-dev-tools` |
+| `gtk3` (headers) | pre-installed |
 | `redshift` (X11) | `sudo pacman -S redshift` |
 | `gammastep` (Wayland) | `sudo pacman -S gammastep` |
 
@@ -39,52 +41,34 @@ sudo pacman -S python-gobject redshift   # X11 / XFCE
 # 2. Clone and install
 git clone https://github.com/YOUR_USERNAME/xfce-night-shift.git
 cd xfce-night-shift
-chmod +x install.sh
-./install.sh
+sudo ./install.sh
 ```
 
-The installer:
-- Copies the package to `~/.local/lib/night-shift/`
-- Installs the `night-shift` launcher to `~/.local/bin/`
-- Creates an autostart entry so the icon appears automatically after login
-
-Make sure `~/.local/bin` is in your `PATH`:
-```bash
-echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
-source ~/.bashrc
-```
+**After installation:**
+1. Restart your panel to load the new module:
+   ```bash
+   xfce4-panel -r
+   ```
+2. Right-click your panel → **Panel Preferences** → **Items** tab.
+3. Click the **+** (Add) button.
+4. Search for **Night Shift** and click **Add**.
 
 ---
 
-## Usage
+## Architecture
 
-```bash
-night-shift          # start (shows tray icon)
-python -m night_shift  # alternative (run from project directory)
-```
+XFCE 4.20 removed the ability to use purely external scripts (`X-XFCE-Exec`) as panel plugins. This project solves this elegantly:
 
-- **Left-click** tray icon → open / close slider popup
-- **Right-click** tray icon → Turn ON/OFF or Quit
-- Popup closes on `Escape` or when it loses focus
+1. **`c_plugin/`**: A minimal native C wrapper (`libnightshift.so`) compiled and loaded directly by `xfce4-panel`. It draws the panel button and moon icon.
+2. **Click Event**: When the panel button is clicked, the C plugin gets its screen coordinates and spawns the Python GTK application.
+3. **`night-shift-py`**: The Python popup receives its exact coordinates from the C wrapper, draws the UI seamlessly next to the panel, modifies the backend state, and cleanly exits when focus is lost.
 
----
-
-## Project structure
-
-```
-night_shift/
-├── app.py        # main coordinator (state, popup placement)
-├── backend.py    # redshift / gammastep interface
-├── config.py     # constants + JSON load/save
-├── popup.py      # GTK popup window widget
-├── style.py      # minimal CSS (border only, rest uses GTK theme)
-├── tray.py       # StatusIcon + right-click menu
-├── __init__.py
-└── __main__.py   # entry point for python -m night_shift
-night-shift       # thin launcher script
-install.sh        # installer
-uninstall.sh      # uninstaller
-pyproject.toml    # packaging metadata
+```text
+xfce4-panel 
+  └── libnightshift.so (C Plugin)
+         ├── Draws Panel Button 
+         └── On Click: Spawns `night-shift-py --x X --y Y`
+                 └── Python GTK Window (Slider, Presets, Redshift API)
 ```
 
 ---
@@ -104,7 +88,7 @@ pyproject.toml    # packaging metadata
 ## Uninstall
 
 ```bash
-./uninstall.sh
+sudo ./uninstall.sh
 ```
 
 ---

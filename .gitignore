@@ -27,3 +27,7 @@ night_shift.egg-info/
 # OS
 .DS_Store
 Thumbs.db
+
+# C / Build artifacts
+*.so
+*.o
