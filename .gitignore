@@ -31,3 +31,5 @@ Thumbs.db
 # C / Build artifacts
 *.so
 *.o
+compile_commands.json
+.cache/
