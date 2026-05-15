@@ -10,10 +10,12 @@ echo -e "\n${CYN}Night Shift XFCE Plugin – Uninstaller${NC}\n"
 
 remove() { [ -e "$1" ] && rm -f "$1" && ok "Removed: $1" || info "Not found: $1"; }
 
-remove "$HOME/.local/bin/night-shift-plugin"
-remove "/usr/local/bin/night-shift-plugin"
-remove "$HOME/.local/share/xfce4/panel/plugins/night-shift.desktop"
+remove "/usr/lib/xfce4/panel/plugins/libnightshift.so"
+remove "/usr/lib/xfce4/panel/plugins/night-shift-py"
 remove "/usr/share/xfce4/panel/plugins/night-shift.desktop"
+remove "/usr/bin/night-shift"
+remove "/etc/xdg/autostart/night-shift-autostart.desktop"
+[ -d "/usr/lib/night-shift" ] && rm -rf "/usr/lib/night-shift" && ok "Removed: /usr/lib/night-shift" || info "Not found: /usr/lib/night-shift"
 
 read -rp "Remove config file (~/.config/xfce4/night-shift.json)? [y/N] " ans
 [[ "$ans" =~ ^[Yy]$ ]] && remove "$HOME/.config/xfce4/night-shift.json"

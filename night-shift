@@ -7,8 +7,11 @@ import warnings
 
 warnings.filterwarnings('ignore', category=DeprecationWarning)
 
-# Ensure the project root is on sys.path so `night_shift` package is found
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+script_dir = os.path.dirname(os.path.abspath(__file__))
+if script_dir == '/usr/bin' or not os.path.exists(os.path.join(script_dir, 'night_shift', '__init__.py')):
+    sys.path.insert(0, '/usr/lib/night-shift')
+else:
+    sys.path.insert(0, script_dir)
 
 from night_shift.__main__ import main
 

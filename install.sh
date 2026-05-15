@@ -51,6 +51,25 @@ info "Installing .desktop..."
 install -Dm644 night-shift.desktop /usr/share/xfce4/panel/plugins/night-shift.desktop
 ok "night-shift.desktop → /usr/share/xfce4/panel/plugins/"
 
+info "Installing background service launcher..."
+install -Dm755 night-shift /usr/bin/night-shift
+ok "night-shift → /usr/bin/"
+
+info "Configuring autostart..."
+mkdir -p /etc/xdg/autostart
+cat << 'EOF' > /etc/xdg/autostart/night-shift-autostart.desktop
+[Desktop Entry]
+Type=Application
+Name=Night Shift
+Comment=Color temperature background service
+Exec=/usr/bin/night-shift --headless
+Icon=weather-clear-night
+Hidden=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+EOF
+ok "Autostart configured → /etc/xdg/autostart/"
+
 echo ""
 echo -e "${GRN}Installation complete!${NC}"
 echo ""
